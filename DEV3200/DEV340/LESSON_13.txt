@@ -1,0 +1,54 @@
+# Do some preparation work
+$ wget http://course-files.mapr.com/DEV3200/DEV340-v5.2-Lab13.tar.gz
+$ tar zxvf DEV340-v5.2-Lab13.tar.gz
+$ cd ycsb-0.1.4/
+
+# Create a new table in the hbase shell
+> create '/user/user01/usertable', 'family'
+
+# Run the "write" performance test via the following script
+export cp=core/lib/core-0.1.4.jar:\
+	hbase-binding/lib/hbase-binding-0.1.4.jar
+export ycsb_processes=2
+export ycsb_threads=3
+cd ~/ycsb-0.1.4
+for i in $(seq 1 $ycsb_processes); do
+	HBASE_CLASSPATH=$cp \
+	hbase com.yahoo.ycsb.Client \
+	-threads $ycsb_threads -db com.yahoo.ycsb.db.HBaseClient \
+	-P workloads/workloada -p columnfamily=family -p table=/user/user01/usertable -load -s \
+	-p insertstart=${i}000 -p insertcount=1000 \
+	> ~/ycsb_write_${i}.txt &
+done
+
+# Now do the read/write test
+export cp=core/lib/core-0.1.4.jar:\
+	hbase-binding/lib/hbase-binding-0.1.4.jar
+export ycsb_processes=2
+export ycsb_threads=3
+cd ~/ycsb-0.1.4
+for i in $(seq 1 $ycsb_processes); do
+	HBASE_CLASSPATH=$cp \
+	hbase com.yahoo.ycsb.Client \
+	-threads $ycsb_threads -db com.yahoo.ycsb.db.HBaseClient \
+	-P workloads/workloada -p columnfamily=family -p table=/user/user01/usertable -t -s \
+	-p insertstart=${i}0000 -p insertcount=1000 \
+	-p operationcount=600 \
+	> ~/ycsb_rw_${i}.txt &
+done
+
+# Finally the scan test
+export cp=core/lib/core-0.1.4.jar:\
+	hbase-binding/lib/hbase-binding-0.1.4.jar
+export ycsb_processes=2
+export ycsb_threads=3
+cd ~/ycsb-0.1.4
+for i in $(seq 1 $ycsb_processes); do
+	HBASE_CLASSPATH=$cp \
+	hbase com.yahoo.ycsb.Client \
+	-threads $ycsb_threads -db com.yahoo.ycsb.db.HBaseClient \
+	-P workloads/workloade -p columnfamily=family -p table=/user/user01/usertable -t -s \
+	-p insertstart=${i}0000 -p insertcount=1000 \
+	-p operationcount=600 -p maxscanlength=50 \
+	> ~/ycsb_scan_${i}.txt &
+done
